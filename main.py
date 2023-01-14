@@ -3,6 +3,7 @@ import sys
 import random
 import time
 import pygame_menu
+import math
 pygame.init()
 surface = pygame.display.set_mode((700, 700))
 
@@ -20,6 +21,7 @@ class Modeling():
         self.brown = pygame.Color(165, 42, 42)
         self.light_green = pygame.Color(200, 255, 200)
         self.grey = pygame.Color(128, 128, 128)
+        self.blue = pygame.Color(0, 0, 255)
 
         # Frame per second controller
         # будет задавать количество кадров в секунду
@@ -60,7 +62,7 @@ class Modeling():
     def show_number_of_people(self, choice=1):
         """Отображение количества"""
         s_font = pygame.font.SysFont('monaco', 24)
-        s_surf = s_font.render(f'Number of people: {self.number_of_people}', True, self.black)
+        s_surf = s_font.render(f'Number of people: {self.number_of_people}', True, self.grey)
         s_rect = s_surf.get_rect()
         # дефолтный случай отображаем результат слева сверху
         if choice == 1:
@@ -119,10 +121,18 @@ class Modeling():
         # pygame.quit()
         # sys.exit()
 
+LEFT_BORDER_X = 120
+RIGHT_BORDER_X = 580
+HIGH_BORDER_Y = 120
+LOW_BORDER_Y = 350
+L_CENTER = 340
+R_CENTER = 360
+mini_vector = 20
+
 class Person():
     def __init__(self, person_color):
-        # важные переменные - позиция головы змеи и его тела
-        self.person_head_pos = [random.randrange(120, 580), random.randrange(120, 350)]  # [x, y]
+        # центр человека
+        self.person_head_pos = [random.randrange(LEFT_BORDER_X, RIGHT_BORDER_X), random.randrange(HIGH_BORDER_Y, LOW_BORDER_Y)]  # [x, y]
 
         self.person_color = person_color
 
@@ -133,14 +143,41 @@ class Person():
 
     def validate_direction_and_change(self):
         """Изменияем направление движения человека"""
-        # если левее середины то в 
-        if self.person_head_pos[0] <= 350:
-            pass
-        elif self.person_head_pos[0] >= 350:
-            pass
+        # вектор перемещения sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
+        # если левее середины то в левую часть
+        if self.person_head_pos[0] < 350:
+            vector = math.sqrt((L_CENTER - self.person_head_pos[0]) ** 2 + (HIGH_BORDER_Y - self.person_head_pos[1]) ** 2)
+            proec_x = abs(L_CENTER - self.person_head_pos[0])
+            proec_y = abs(HIGH_BORDER_Y - self.person_head_pos[1])
+            try:
+                sin_a = proec_y / vector
+                cos_a = proec_x / vector
+                del_x = round(cos_a * mini_vector)
+                del_y = round(sin_a * mini_vector)
+                self.person_head_pos[0] += del_x
+                self.person_head_pos[1] -= del_y
+            except ZeroDivisionError:
+                print(vector)
+        # если правее середины то в правую часть
+        elif self.person_head_pos[0] > 350:
+            try:
+                vector = math.sqrt((R_CENTER - self.person_head_pos[0]) ** 2 + (HIGH_BORDER_Y - self.person_head_pos[1]) ** 2)
+                proec_x = abs(R_CENTER - self.person_head_pos[0])
+                proec_y = abs(HIGH_BORDER_Y - self.person_head_pos[1])
+                sin_a = proec_y / vector
+                cos_a = proec_x / vector
+                del_x = round(cos_a * mini_vector)
+                del_y = round(sin_a * mini_vector)
+                self.person_head_pos[0] -= del_x
+                self.person_head_pos[1] -= del_y
+            except ZeroDivisionError:
+                print(vector)
+        # если ровно посередине
+        elif self.person_head_pos[0] == 350:
+            self.person_head_pos[1] -= mini_vector
 
-    def change_head_position(self):
-        """Изменияем положение человека"""
+    def get_coords(self):
+        """Получаем координаты"""
         pass
 
     def person_body_mechanism(self, score, food_pos, screen_width, screen_height):
@@ -161,25 +198,38 @@ class Person():
     
 def start_the_modeling():
     modeling = Modeling()
-    person = Person(modeling.red)
 
     modeling.init_and_check_for_errors()
     modeling.set_surface_and_title()
 
-    # for i in range(NUMBER_OF_PEOPLE)
-    while True:        
-        person.change_to = modeling.event_loop(person.change_to)
-
-        person.validate_direction_and_change()
-        person.change_head_position()
-        modeling.show_number_of_people()
+    all_people = {}
+    people = []
+    movements = []
+    for i in range(1, NUMBER_OF_PEOPLE + 1):
+        person = Person(modeling.blue)
+        all_people[f'person{i}'] = person
+        people.append()
         
+    
+    sorted_people = []
+    for i in range(1, NUMBER_OF_PEOPLE + 1):
+
+    
+    while True:
         modeling.draw_surface()
-        person.draw_person(modeling.main_surface, modeling.red)
+        for person in all_people.values():        
+            person.change_to = modeling.event_loop(person.change_to)
 
-        # person.check_for_boundaries(modeling.the_end, modeling.screen_width, modeling.screen_height)
+            person.validate_direction_and_change()
+            person.change_head_position()
+            modeling.show_number_of_people()
+            
+            # modeling.draw_surface()
+            person.draw_person(modeling.main_surface, modeling.blue)
+
+            # person.check_for_boundaries(modeling.the_end, modeling.screen_width, modeling.screen_height)
         modeling.refresh_screen()
-
+        time.sleep(1)
 
 
 
