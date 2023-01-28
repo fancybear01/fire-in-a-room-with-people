@@ -92,7 +92,7 @@ class Modeling():
         
         # отрисовка двух прмоугольников
         surf1.blit(surf2, (10, 10))
-        surf1.blit(surf3, (midtop[0] - 10, 0))
+        surf1.blit(surf3, (midtop[0] - 20, 0))
 
         # загрузка картинки
         IMG_FIRE = pygame.image.load(r"D:\python\PORJECT_SCHOOL\fire-in-a-room-with-people\fire.png").convert()
@@ -149,7 +149,7 @@ class Person():
         """Изменияем направление движения человека"""
         # вектор перемещения sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
         # если левее середины то в левую часть
-        if self.person_head_pos[0] < 340:
+        if self.person_head_pos[0] < L_CENTER:
             vector = math.sqrt((L_CENTER - self.person_head_pos[0]) ** 2 + (HIGH_BORDER_Y - self.person_head_pos[1]) ** 2)
             proec_x = abs(L_CENTER - self.person_head_pos[0])
             proec_y = abs(HIGH_BORDER_Y - self.person_head_pos[1])
@@ -158,15 +158,21 @@ class Person():
                 cos_a = proec_x / vector
                 del_x = round(cos_a * mini_vector)
                 del_y = round(sin_a * mini_vector)
-                self.person_head_pos[0] += del_x
-                self.person_head_pos[1] -= del_y
+                # проверка, чтобы не заходил за стену вверх
+                if self.person_head_pos[1] - del_y <= HIGH_BORDER_Y and self.person_head_pos[0] + del_x < L_CENTER:
+                    print("x", self.person_head_pos[0], 'y', self.person_head_pos[1], "---", del_y)
+                    self.person_head_pos[0] += del_x
+                    self.person_head_pos[1] = HIGH_BORDER_Y + 10
+                else:
+                    self.person_head_pos[0] += del_x
+                    self.person_head_pos[1] -= del_y
             except ZeroDivisionError:
                 print(vector)
         # если в центре
-        elif 340 <= self.person_head_pos[0] <= 360:
+        elif L_CENTER <= self.person_head_pos[0] <= R_CENTER:
             self.person_head_pos[1] -= mini_vector
         # если правее середины то в правую часть
-        elif self.person_head_pos[0] > 360:
+        elif self.person_head_pos[0] > R_CENTER:
             try:
                 vector = math.sqrt((R_CENTER - self.person_head_pos[0]) ** 2 + (HIGH_BORDER_Y - self.person_head_pos[1]) ** 2)
                 proec_x = abs(R_CENTER - self.person_head_pos[0])
@@ -175,14 +181,20 @@ class Person():
                 cos_a = proec_x / vector
                 del_x = round(cos_a * mini_vector)
                 del_y = round(sin_a * mini_vector)
-                self.person_head_pos[0] -= del_x
-                self.person_head_pos[1] -= del_y
+                # проверка, чтобы не заходил за стену вверх
+                if self.person_head_pos[1] - del_y <= HIGH_BORDER_Y and self.person_head_pos[0] - del_x > R_CENTER:
+                    print("x", self.person_head_pos[0], 'y', self.person_head_pos[1], "---", del_y)
+                    self.person_head_pos[0] -= del_x
+                    self.person_head_pos[1] = HIGH_BORDER_Y + 10
+                else:
+                    self.person_head_pos[0] -= del_x
+                    self.person_head_pos[1] -= del_y
             except ZeroDivisionError:
                 print(vector)           
 
     def get_coords(self):
         """Получаем координаты"""
-        return (self.person_head_pos[0], self.person_head_pos[1])
+        return [self.person_head_pos[0], self.person_head_pos[1]]
 
     def get_vector_to_exit(self):
         """Получаем длину вектор до выхода"""
@@ -199,12 +211,29 @@ class Person():
         # y = random.randrange(120, 350)
         pygame.draw.circle(main_surface, surface_color, self.person_head_pos, 10)
 
-    def check_for_boundaries(self, game_over, screen_width, screen_height):
-        """Проверка границ"""
-        pass
+    def check_for_boundaries(self):
+        """Проверка границ со стеной"""
+        if self.person_head_pos[0] < L_CENTER or self.person_head_pos[0] > R_CENTER:
+            if self.person_head_pos[0] - 10 == LEFT_BORDER_X:
+                return True
+            elif self.person_head_pos[0] + 10 == RIGHT_BORDER_X:
+                return True
+            elif self.person_head_pos[1] - 10 == HIGH_BORDER_Y:
+                return True
+            elif self.person_head_pos[1] + 10 == LOW_BORDER_Y:
+                return True
+        else:
+            return False
+    
+    def move_horizontally(self):
+        """Двигаться горизонтально"""
+        if self.person_head_pos[0] < L_CENTER:
+            self.person_head_pos[0] += mini_vector
+        elif self.person_head_pos[0] > R_CENTER:
+            self.person_head_pos[0] -= mini_vector
+ 
 
- 
- 
+
 def start_the_modeling():
     NUMBER_OF_PEOPLE = int(num_in.get_value())
     modeling = Modeling(NUMBER_OF_PEOPLE)
@@ -224,8 +253,6 @@ def start_the_modeling():
 
         def check_coors(x, y):
             for j in range(i):
-                print(j)
-                print(invalid_coordinates)
                 if ((invalid_coordinates[j][0] <= x <= invalid_coordinates[j][1])
                     and (invalid_coordinates[j][2] <= y <= invalid_coordinates[j][3])):
                     return False
@@ -233,18 +260,14 @@ def start_the_modeling():
 
         if i == 0:
             all_people[f'person{i}'] = person
-            invalid_coordinates.append((x_cut - 20, x_cut + 20, y_cut - 20, y_cut + 2))
-            print(invalid_coordinates)            
+            invalid_coordinates.append((x_cut - 20, x_cut + 20, y_cut - 20, y_cut + 2))           
             k -= 1
             i += 1
-            print(i)
         elif check_coors(x_cut, y_cut):
             all_people[f'person{i}'] = person
-            invalid_coordinates.append((x_cut - 20, x_cut + 20, y_cut - 20, y_cut + 20))
-            print(invalid_coordinates)             
+            invalid_coordinates.append((x_cut - 20, x_cut + 20, y_cut - 20, y_cut + 20))            
             k -= 1
             i += 1
-            print(i)
         else:
             # удалить экземпляр класса
             del person       
@@ -252,26 +275,56 @@ def start_the_modeling():
     # создаем список словарей
     sorted_people = []
     for item in all_people.values():
-        sorted_people.append({'person': item,
+        sorted_people.append({'person': item, 
                              'vector_to_exit': item.get_vector_to_exit(),
-                             'color': item.person_color})
+                             'color': item.person_color,
+                             'coordinates': item.get_coords()})
     # сортируем списовк слловарей, чтобы в главном цикле начинать с ближайшего
     sorted_people.sort(key=lambda dictionary: dictionary['vector_to_exit'])
-    print(sorted_people)
-    
+
+    def is_person_in_circle(spisok, xc, yc, r):
+        """Определить, если поблизости люди: ((x - xc) ** 2 + (y - yc) ** 2) <= (r * r)"""
+        nearby_people = []
+        for coors in spisok:
+            if coors == [xc, yc]:
+                continue
+            elif ((coors[0] - xc) ** 2 + (coors[1] - yc) ** 2) <= (r * r):
+                nearby_people.append(coors) 
+        # если нет людей поблизости 
+        if len(nearby_people) == 0:
+            return False, None
+        else:
+            return True, nearby_people         
+
     while True:
         modeling.draw_surface()
+        all_coordinates = [i['coordinates'] for i in sorted_people]
         for dic in sorted_people:
-            person = dic['person']        
+            person = dic['person']    
             person.change_to = modeling.event_loop(person.change_to)
+            x, y = dic['coordinates']
+            result, lst = is_person_in_circle(all_coordinates, xc = x, yc = y, r = 30)
+            # если рядом со стеной
+            if person.check_for_boundaries():
+                if result:
+                    # так не должно быть
+                    person.validate_direction_and_change()
+                    person.draw_person(modeling.main_surface, modeling.blue)
+                else:
+                    person.move_horizontally()
+                    person.draw_person(modeling.main_surface, modeling.blue)
+            else:
+                if result:
+                    # так не должно быть
+                    person.validate_direction_and_change()
+                    person.draw_person(modeling.main_surface, modeling.blue)
+                else:
+                    person.validate_direction_and_change()
+                    person.draw_person(modeling.main_surface, modeling.blue)
 
-            person.validate_direction_and_change()
             modeling.show_number_of_people()
             
-            # modeling.draw_surface()
-            person.draw_person(modeling.main_surface, modeling.blue)
-
-            # person.check_for_boundaries(modeling.the_end, modeling.screen_width, modeling.screen_height)
+            dic['coordinates'] = person.get_coords()
         modeling.refresh_screen()
         time.sleep(1)
 
@@ -281,9 +334,6 @@ menu = pygame_menu.Menu('Добро пожаловать', 700, 700,
                        theme=pygame_menu.themes.THEME_BLUE)
 
 num_in = menu.add.text_input('Количество людей :', default='10')
-# NUMBER_OF_PEOPLE = int(num_in.get_value())
-# print(NUMBER_OF_PEOPLE)
-# print(num_in)
 menu.add.button('Начать', start_the_modeling)
 menu.add.button('Выйти', pygame_menu.events.EXIT)
 menu.mainloop(surface)
