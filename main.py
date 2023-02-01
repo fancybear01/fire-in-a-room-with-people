@@ -65,7 +65,7 @@ class Modeling():
         s_font = pygame.font.SysFont('monaco', 24)
         s_surf_1 = s_font.render(f'Количество человек: {self.number_of_people}', True, self.blue)
         s_surf_2 = s_font.render(f'Количество людей, потерявших сознание: {self.unconscious}', True, self.blue)
-        s_surf_3 = s_font.render(f'Прошло времени: {self.time}', True, self.blue)
+        s_surf_3 = s_font.render(f'Прошло времени: {self.time} секунд', True, self.blue)
         s_rect_1 = s_surf_1.get_rect()
         s_rect_2 = s_surf_1.get_rect()
         s_rect_3 = s_surf_1.get_rect()
