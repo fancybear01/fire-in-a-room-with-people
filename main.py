@@ -28,7 +28,8 @@ class Modeling():
         self.fps_controller = pygame.time.Clock()
 
         self.number_of_people = number
-
+        self.unconscious = 0
+        self.time = 0
         
 
     def init_and_check_for_errors(self):
@@ -59,20 +60,30 @@ class Modeling():
         """обновляем экран и задаем фпс"""
         pygame.display.flip()
 
-    def show_number_of_people(self, choice=1):
+    def show_information(self, choice=1):
         """Отображение количества"""
         s_font = pygame.font.SysFont('monaco', 24)
-        s_surf = s_font.render(f'Количество человек: {self.number_of_people}', True, self.blue)
-        s_rect = s_surf.get_rect()
+        s_surf_1 = s_font.render(f'Количество человек: {self.number_of_people}', True, self.blue)
+        s_surf_2 = s_font.render(f'Количество людей, потерявших сознание: {self.unconscious}', True, self.blue)
+        s_surf_3 = s_font.render(f'Прошло времени: {self.time}', True, self.blue)
+        s_rect_1 = s_surf_1.get_rect()
+        s_rect_2 = s_surf_1.get_rect()
+        s_rect_3 = s_surf_1.get_rect()
         # дефолтный случай отображаем результат слева сверху
         if choice == 1:
-            s_rect.midtop = (100, 40)
+            s_rect_1.midtop = (100, 30)
+            s_rect_2.midtop = (100, 50)
+            s_rect_3.midtop = (100, 70)
         # при game_over отображаем результат по центру
         # под надписью game over
         else:
-            s_rect.midtop = (360, 120)
+            s_rect_1.midtop = (360, 120)
+            s_rect_2.midtop = (360, 140)
+            s_rect_3.midtop = (360, 160)
         # рисуем прямоугольник поверх surface
-        self.main_surface.blit(s_surf, s_rect)
+        self.main_surface.blit(s_surf_1, s_rect_1)
+        self.main_surface.blit(s_surf_2, s_rect_2)
+        self.main_surface.blit(s_surf_3, s_rect_3)
     
     def draw_surface(self):
         self.main_surface.fill(self.light_green)
@@ -108,6 +119,14 @@ class Modeling():
         #отрисовка огня
         self.main_surface.blit(fire_surf, (320, 430)) 
 
+    def add_second(self):
+        """Увелечение времени"""
+        self.time = self.time + 1
+    
+    def add_dead_people(self):
+        """Увелечение числа погибших людей"""
+        self.unconscious = self.unconscious + 1
+
     def the_end(self):
         """конец"""
         go_font = pygame.font.SysFont('monaco', 72)
@@ -115,11 +134,11 @@ class Modeling():
         go_rect = go_surf.get_rect()
         go_rect.midtop = (360, 15)
         self.main_surface.blit(go_surf, go_rect)
-        self.show_number_of_people(0)
+        self.show_information(0)
         pygame.display.flip()
-        time.sleep(3)
-        # pygame.quit()
-        # sys.exit()
+        time.sleep(5)
+        pygame.quit()
+        sys.exit()
 # в будущем для бодьщей шибкости и вариативности
 # Length = 460
 # High = 230
@@ -139,6 +158,7 @@ class Person():
         self.person_head_pos = [random.randrange(LEFT_BORDER_X + 10, RIGHT_BORDER_X - 10), random.randrange(HIGH_BORDER_Y + 10, LOW_BORDER_Y - 10)]  # [x, y]
 
         self.person_color = person_color
+        self.alive = True
 
         self.direction = "OK"
 
@@ -198,7 +218,12 @@ class Person():
 
     def get_vector_to_exit(self):
         """Получаем длину вектор до выхода"""
-        vector = math.sqrt((MIDDLE - self.person_head_pos[0]) ** 2 + (MIDDLE- self.person_head_pos[1]) ** 2)
+        if self.person_head_pos[0] < L_CENTER:
+            vector = math.sqrt((L_CENTER - self.person_head_pos[0]) ** 2 + (HIGH_BORDER_Y - self.person_head_pos[1]) ** 2)
+        elif L_CENTER <= self.person_head_pos[0] <= R_CENTER:
+            vector = math.sqrt((HIGH_BORDER_Y - self.person_head_pos[1]) ** 2)
+        elif self.person_head_pos[0] > R_CENTER:
+            vector = math.sqrt((R_CENTER - self.person_head_pos[0]) ** 2 + (HIGH_BORDER_Y - self.person_head_pos[1]) ** 2)
         return vector
 
     def person_body_mechanism(self, score, screen_width, screen_height):
@@ -231,7 +256,22 @@ class Person():
             self.person_head_pos[0] += mini_vector
         elif self.person_head_pos[0] > R_CENTER:
             self.person_head_pos[0] -= mini_vector
- 
+
+    def is_alive(self):
+        """Проверить живой или нет"""
+        if self.alive:
+            return True
+        else:
+            return False
+    
+    def lost_consciousness(self):
+        """Вероятность, что потеряет сознание"""
+        probability = random.randint(1, 100)
+        if 1 <= probability <= 5:
+            self.alive = False
+            return True
+        return False
+
 
 
 def start_the_modeling():
@@ -247,24 +287,27 @@ def start_the_modeling():
     i = 0
     # список кортежей, где не может появится человек
     invalid_coordinates = []
+
     while k > 0:
         person = Person(modeling.blue)
         x_cut, y_cut = person.get_coords()
-
         def check_coors(x, y):
             for j in range(i):
                 if ((invalid_coordinates[j][0] <= x <= invalid_coordinates[j][1])
                     and (invalid_coordinates[j][2] <= y <= invalid_coordinates[j][3])):
                     return False
             return True
-
         if i == 0:
             all_people[f'person{i}'] = person
-            invalid_coordinates.append((x_cut - 20, x_cut + 20, y_cut - 20, y_cut + 2))           
-            k -= 1
+            if person.lost_consciousness():
+                modeling.add_dead_people()
+            invalid_coordinates.append((x_cut - 20, x_cut + 20, y_cut - 20, y_cut + 20))           
+            k -= 1 
             i += 1
         elif check_coors(x_cut, y_cut):
             all_people[f'person{i}'] = person
+            if person.lost_consciousness():
+                modeling.add_dead_people()
             invalid_coordinates.append((x_cut - 20, x_cut + 20, y_cut - 20, y_cut + 20))            
             k -= 1
             i += 1
@@ -294,38 +337,54 @@ def start_the_modeling():
         if len(nearby_people) == 0:
             return False, None
         else:
-            return True, nearby_people         
-
+            return True, nearby_people
+    flag = True
+    # основноый цикл 
     while True:
         modeling.draw_surface()
         all_coordinates = [i['coordinates'] for i in sorted_people]
-        for dic in sorted_people:
-            person = dic['person']    
-            person.change_to = modeling.event_loop(person.change_to)
-            x, y = dic['coordinates']
-            result, lst = is_person_in_circle(all_coordinates, xc = x, yc = y, r = 30)
-            # если рядом со стеной
-            if person.check_for_boundaries():
-                if result:
-                    # так не должно быть
-                    person.validate_direction_and_change()
-                    person.draw_person(modeling.main_surface, modeling.blue)
+        # первоначальная отрисовка
+        if flag:
+            for dic in sorted_people:
+                person = dic['person'] 
+                person.draw_person(modeling.main_surface, modeling.blue)
+            flag = False
+            time.sleep(0.5)
+        else:
+            # отрисовка людей   
+            for dic in sorted_people:
+                person = dic['person']    
+                person.change_to = modeling.event_loop(person.change_to)
+                x, y = dic['coordinates']
+                result, lst = is_person_in_circle(all_coordinates, xc = x, yc = y, r = 30)
+                if person.is_alive():
+                    # если рядом со стеной
+                    if person.check_for_boundaries():
+                        if result:
+                            # так не должно быть
+                            person.validate_direction_and_change()
+                            person.draw_person(modeling.main_surface, modeling.blue)
+                        else:
+                            person.move_horizontally()
+                            person.draw_person(modeling.main_surface, modeling.blue)
+                    else:
+                        if result:
+                            # так не должно быть
+                            person.validate_direction_and_change()
+                            person.draw_person(modeling.main_surface, modeling.blue)
+                        else:
+                            person.validate_direction_and_change()
+                            person.draw_person(modeling.main_surface, modeling.blue)
                 else:
-                    person.move_horizontally()
-                    person.draw_person(modeling.main_surface, modeling.blue)
-            else:
-                if result:
-                    # так не должно быть
-                    person.validate_direction_and_change()
-                    person.draw_person(modeling.main_surface, modeling.blue)
-                else:
-                    person.validate_direction_and_change()
-                    person.draw_person(modeling.main_surface, modeling.blue)
-
-            modeling.show_number_of_people()
-            
-            dic['coordinates'] = person.get_coords()
-        modeling.refresh_screen()
+                    person.draw_person(modeling.main_surface, modeling.red)
+                dic['coordinates'] = person.get_coords()
+            modeling.add_second()
+       
+        if sorted_people[-1]['coordinates'][1] < HIGH_BORDER_Y - 40:
+            modeling.the_end()
+        else:
+            modeling.show_information()
+        modeling.refresh_screen()             
         time.sleep(1)
 
 
